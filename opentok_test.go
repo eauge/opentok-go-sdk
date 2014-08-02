@@ -1,19 +1,19 @@
 package opentok
 
 import (
+	"errors"
 	"fmt"
-	"time"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
-	"os"
-	"errors"
+	"time"
 )
 
 var (
 	apiKey    = readIntVariable("API_KEY", true)
 	apiSecret = readStringVariable("API_SECRET", true)
-	apiUrl 	= readStringVariable("API_URL", false)
+	apiUrl    = readStringVariable("API_URL", false)
 )
 
 func TestOpenTok(t *testing.T) {
@@ -36,7 +36,7 @@ func TestCreateSession(t *testing.T) {
 	options := SessionOptions{}
 	session, err := createSessionHelper(options)
 
-	if  err != nil {
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
@@ -56,7 +56,7 @@ func TestCreateRelayedSession(t *testing.T) {
 	options := SessionOptions{MediaMode: Relayed}
 	session, err := createSessionHelper(options)
 
-	if  err != nil {
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
@@ -76,7 +76,7 @@ func TestCreateRoutedSession(t *testing.T) {
 	options := SessionOptions{MediaMode: Routed}
 	session, err := createSessionHelper(options)
 
-	if  err != nil{
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
@@ -91,7 +91,7 @@ func TestCreateSessionWithLocation(t *testing.T) {
 	options := SessionOptions{Location: "127.0.0.1"}
 	session, err := createSessionHelper(options)
 
-	if  err != nil {
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
@@ -106,12 +106,12 @@ func TestCreateRoutedSessionWithLocation(t *testing.T) {
 	options := SessionOptions{MediaMode: Routed, Location: "127.0.0.1"}
 	session, err := createSessionHelper(options)
 
-	if  err != nil {
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
 
-	if err = session.Create();err != nil {
+	if err = session.Create(); err != nil {
 		t.Error(fmt.Sprintf("Session should have been created : %s", err))
 		return
 	}
@@ -121,7 +121,7 @@ func TestGenerateTokenWithoutSession(t *testing.T) {
 	options := SessionOptions{}
 	session, err := createSessionHelper(options)
 
-	if  err != nil {
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
@@ -135,7 +135,7 @@ func TestGenerateTokenWithoutSession(t *testing.T) {
 func TestGenerateToken(t *testing.T) {
 	session, err := createSessionHelper(SessionOptions{})
 
-	if  err != nil {
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
@@ -146,7 +146,7 @@ func TestGenerateToken(t *testing.T) {
 	}
 
 	var (
-		token Token
+		token           Token
 		tokenProperties = TokenProperties{}
 	)
 	if token, err = session.GenerateToken(tokenProperties); err != nil {
@@ -168,7 +168,7 @@ func TestGenerateToken(t *testing.T) {
 		return
 	}
 
-	if decodedToken["session_id"] != session.id || decodedToken["role"] != string(Publisher) ||
+	if decodedToken["session_id"] != session.Id || decodedToken["role"] != string(Publisher) ||
 		decodedPartnerId != apiKey {
 		t.Error("Parameters in token inconsistent with properties provided")
 		return
@@ -178,7 +178,7 @@ func TestGenerateToken(t *testing.T) {
 func TestGenerateSubscriberToken(t *testing.T) {
 	session, err := createSessionHelper(SessionOptions{})
 
-	if  err != nil {
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
@@ -189,8 +189,8 @@ func TestGenerateSubscriberToken(t *testing.T) {
 	}
 
 	var (
-		token Token
-		tokenProperties = TokenProperties {Role: Subscriber}
+		token           Token
+		tokenProperties = TokenProperties{Role: Subscriber}
 	)
 	if token, err = session.GenerateToken(tokenProperties); err != nil {
 		t.Error(fmt.Sprintf("Token could not be generated : %s", err))
@@ -211,7 +211,7 @@ func TestGenerateSubscriberToken(t *testing.T) {
 		return
 	}
 
-	if decodedToken["session_id"] != session.id || decodedToken["role"] != string(Subscriber) ||
+	if decodedToken["session_id"] != session.Id || decodedToken["role"] != string(Subscriber) ||
 		decodedPartnerId != apiKey {
 		t.Error("Parameters in token inconsistent with properties provided")
 		return
@@ -221,7 +221,7 @@ func TestGenerateSubscriberToken(t *testing.T) {
 func TestGenerateModeratorToken(t *testing.T) {
 	session, err := createSessionHelper(SessionOptions{})
 
-	if  err != nil {
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
@@ -232,8 +232,8 @@ func TestGenerateModeratorToken(t *testing.T) {
 	}
 
 	var (
-		token Token
-		tokenProperties = TokenProperties {Role: Moderator}
+		token           Token
+		tokenProperties = TokenProperties{Role: Moderator}
 	)
 	if token, err = session.GenerateToken(tokenProperties); err != nil {
 		t.Error(fmt.Sprintf("Token could not be generated : %s", err))
@@ -254,7 +254,7 @@ func TestGenerateModeratorToken(t *testing.T) {
 		return
 	}
 
-	if decodedToken["session_id"] != session.id || decodedToken["role"] != string(Moderator) ||
+	if decodedToken["session_id"] != session.Id || decodedToken["role"] != string(Moderator) ||
 		decodedPartnerId != apiKey {
 		t.Error("Parameters in token inconsistent with properties provided")
 		return
@@ -264,7 +264,7 @@ func TestGenerateModeratorToken(t *testing.T) {
 func TestGenerateTokenWithExpiration(t *testing.T) {
 	session, err := createSessionHelper(SessionOptions{})
 
-	if  err != nil {
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
@@ -275,9 +275,9 @@ func TestGenerateTokenWithExpiration(t *testing.T) {
 	}
 
 	var (
-		token Token
-		expireTime = time.Now().Unix() + 1000
-		tokenProperties = TokenProperties {ExpireTime: expireTime}
+		token           Token
+		expireTime      = time.Now().Unix() + 1000
+		tokenProperties = TokenProperties{ExpireTime: expireTime}
 	)
 	if token, err = session.GenerateToken(tokenProperties); err != nil {
 		t.Error(fmt.Sprintf("Token could not be generated : %s", err))
@@ -305,18 +305,17 @@ func TestGenerateTokenWithExpiration(t *testing.T) {
 		return
 	}
 
-	if decodedToken["session_id"] != session.id || decodedToken["role"] != string(Publisher) ||
+	if decodedToken["session_id"] != session.Id || decodedToken["role"] != string(Publisher) ||
 		decodedPartnerId != apiKey || expireTimeNew != expireTime {
 		t.Error("Parameters in token inconsistent with properties provided")
 		return
 	}
 }
 
-
 func TestGenerateTokenWithData(t *testing.T) {
 	session, err := createSessionHelper(SessionOptions{})
 
-	if  err != nil {
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
@@ -327,9 +326,9 @@ func TestGenerateTokenWithData(t *testing.T) {
 	}
 
 	var (
-		token Token
-		data = "This is data for the token"
-		tokenProperties = TokenProperties {Data: data}
+		token           Token
+		data            = "This is data for the token"
+		tokenProperties = TokenProperties{Data: data}
 	)
 	if token, err = session.GenerateToken(tokenProperties); err != nil {
 		t.Error(fmt.Sprintf("Token could not be generated : %s", err))
@@ -350,7 +349,7 @@ func TestGenerateTokenWithData(t *testing.T) {
 		return
 	}
 
-	if decodedToken["session_id"] != session.id || decodedToken["role"] != string(Publisher) ||
+	if decodedToken["session_id"] != session.Id || decodedToken["role"] != string(Publisher) ||
 		decodedPartnerId != apiKey || data != decodedToken["connection_data"] {
 		t.Error("Parameters in token inconsistent with properties provided")
 		return
@@ -360,7 +359,7 @@ func TestGenerateTokenWithData(t *testing.T) {
 func TestStartArchive(t *testing.T) {
 	session, err := createSessionHelper(SessionOptions{})
 
-	if  err != nil {
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
@@ -379,7 +378,7 @@ func TestStartArchive(t *testing.T) {
 func TestStopArchive(t *testing.T) {
 	session, err := createSessionHelper(SessionOptions{})
 
-	if  err != nil {
+	if err != nil {
 		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
 		return
 	}
@@ -450,7 +449,7 @@ func decodeToken(token Token) (map[string]string, error) {
 	// var encodedSignature = strings.Split(apiKeyAndSignature, "&")[1]
 
 	var tokenParamsArray = strings.Split(tokenParameters, "&")
-	var parameters map[string]string = map[string]string {
+	var parameters map[string]string = map[string]string{
 		strings.Split(apiKey, "=")[0]: strings.Split(apiKey, "=")[1],
 	}
 
@@ -469,8 +468,8 @@ func validateSession(session *Session) (err error) {
 	if session == nil {
 		return errors.New(fmt.Sprintf("Error when decoding session: nil session provided"))
 	}
-	sessionId := session.id
-	if len(sessionId) < 2{
+	sessionId := session.Id
+	if len(sessionId) < 2 {
 		return errors.New(fmt.Sprintf("Error when decoding session: sessionId is not long enough: %s", sessionId))
 	}
 
@@ -497,7 +496,6 @@ func validateSession(session *Session) (err error) {
 	}
 	return nil
 }
-
 
 func readIntVariable(variable string, mandatory bool) int {
 	value := os.Getenv(variable)
