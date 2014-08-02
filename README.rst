@@ -4,13 +4,13 @@ Go SDK for the OpenTok Platform
 
 Warning :
 --------------------
-The code is not ready for building web applications. There's a a set
+The sdk is not ready for building web applications. There's a a set
 of tests that pass successfully but I want to add a couple of
 sample apps before removing this warning. However, adventoruous developers
 are more than welcome to try it out!
 
-Besides, keep in mind that this is not an official Server SDK from 
-TokBox. This is a community effort so developers that want to use Go 
+Please, keep in mind that this is not a Server SDK officially supported
+by TokBox. This is a community effort so developers that want to use Go 
 can use it to build OpenTok powered web and mobile applications. 
 
 How To Get the Code:
@@ -97,6 +97,14 @@ Get An Archive::
 List All Archives linked to you API_KEY::
 
   archives, err := opentok.ListArchives(archive.Id, 0, 0)
+
+Sample Applications:
+----------------
+Find below links to sample applications developed using this sdk:
+
+- `Sample <https://github.com/eauge/opentok-go-sample/>`_ showcasing the most basic functionality of the sdk.
+
+- `Archiving sample <https://github.com/eauge/opentok-go-archiving/>`_ showcasing session creation and archiving.
 
 What Comes Next:
 ----------------
