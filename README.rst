@@ -2,17 +2,6 @@
 Go SDK for the OpenTok Platform
 ===============================
 
-Warning :
---------------------
-The sdk is not ready for building web applications. There's a a set
-of tests that pass successfully but I want to add a couple of
-sample apps before removing this warning. However, adventoruous developers
-are more than welcome to try it out!
-
-Please, keep in mind that this is not a Server SDK officially supported
-by TokBox. This is a community effort so developers that want to use Go 
-can use it to build OpenTok powered web and mobile applications. 
-
 How To Get the Code:
 --------------------
 ::
