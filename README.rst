@@ -64,8 +64,8 @@ And run the code below wrapped in main ::
 	fmt.Println("Token created", token.Value())
   
 	
-How To Interact With Archiving:
--------------------------------
+How Archiving Works:
+--------------------
 Create An Archive::
 
   archive, err := session.StartArchive("my archive")
