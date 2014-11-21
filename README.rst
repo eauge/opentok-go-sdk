@@ -36,34 +36,33 @@ How To Get Started:
 --------------------
 You need to import::
   
-  import "github.com/eauge/opentok"
+  import opentok "github.com/eauge/opentok-go-sdk"
 
 And run the code below wrapped in main ::
   
 	var (
-		apiKey  = 0
-		apiSecret = "*** Your API SECRET ***"
-		ot      = opentok.OpenTok{ApiKey: apiKey, ApiSecret: apiSecret}
-		sp      = opentok.SessionOptions{}
+		apiKey    = 44603982
+		apiSecret = "1963c1345671419ea659b0feaa47b1206471463b"
+		ot        = opentok.OpenTok{ApiKey: apiKey, ApiSecret: apiSecret}
+		session   *opentok.Session
+		token     *opentok.Token
+		err       error
 	)
 
-	session, err := opentok.NewSession(ot, sp)
-	if err != nil {
-		fmt.Println(fmt.Sprintf("Error, session object could not be created: %s", err))
-		return
+	if session, err = opentok.NewSession(ot, opentok.SessionOptions{}); err != nil {
+		log.Fatal("Error, session object could not be created: ", err)
+	}
+	if err := session.Create(); err != nil {
+		log.Fatal("Error, session could not be created: ", err)
+	}
+	if token, err = session.Token(opentok.TokenProperties{}); err != nil {
+		log.Fatal("Error in creating token ", err)
 	}
 
-	err = session.Create()
-	if err != nil {
-		fmt.Println(fmt.Sprintf("Error, session could not be created: %s", err))
-		return
-	}
+	// We print the session and the token created
+	fmt.Println("Session created", session.Id)
+	fmt.Println("Token created", token.Value())
   
-  fmt.Println("Session created", session.Id)
-
-	var token opentok.Token
-	token, err = session.GenerateToken(opentok.TokenProperties{})
-	fmt.Println("Token created", token)
 	
 How To Interact With Archiving:
 -------------------------------
