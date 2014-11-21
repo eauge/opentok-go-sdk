@@ -224,7 +224,7 @@ func createSessionHelper(options SessionOptions) (s *Session, err error) {
 }
 
 func decodeToken(token *Token) (map[string]string, error) {
-	var tokenString = token.Value()
+	var tokenString = token.String()
 
 	if len(tokenString) == 0 {
 		return nil, errors.New("Token is an empty string")

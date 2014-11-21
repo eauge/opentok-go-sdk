@@ -33,7 +33,7 @@ func newToken(prop TokenProperties) *Token {
 	return &Token{prop: prop}
 }
 
-func (t Token) Value() string {
+func (t Token) String() string {
 	buffer := bytes.NewBufferString("")
 	buffer.WriteString(fmt.Sprintf("partner_id=%d", t.prop.apiKey))
 	buffer.WriteString(fmt.Sprintf("&sig=%s:%s", t.signature(), t.key()))
