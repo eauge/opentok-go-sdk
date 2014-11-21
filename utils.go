@@ -1,24 +1,24 @@
 package opentok
 
 import (
-	"encoding/base64"
-	"encoding/xml"
-	"crypto/sha1"
 	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/xml"
 )
 
-type XmlSessions struct {
-	XMLName xml.Name `xml:"sessions"`
-	Sessions []XmlSession `xml:"Session"`
+type xmlSessions struct {
+	XMLName  xml.Name     `xml:"sessions"`
+	Sessions []xmlSession `xml:"Session"`
 }
 
-type XmlSession struct {
-	XMLName xml.Name `xml:"Session"`
-	PartnerId int		`xml:"partner_id"`
-	SessionId string	`xml:"session_id"`
-	CreateDate string	`xml:"create_dt"`
+type xmlSession struct {
+	XMLName    xml.Name `xml:"Session"`
+	PartnerId  int      `xml:"partner_id"`
+	SessionId  string   `xml:"session_id"`
+	CreateDate string   `xml:"create_dt"`
 }
 
 func decodeArchive(body []byte) (archive Archive, err error) {
@@ -32,23 +32,17 @@ func decodeArchive(body []byte) (archive Archive, err error) {
 
 func decodeArchiveList(body []byte) (as []Archive, err error) {
 	var archiveList archiveList
-
-	err = json.Unmarshal(body, &archiveList)
-	if err != nil {
+	if err = json.Unmarshal(body, &archiveList); err != nil {
 		return nil, err
 	}
-	as = archiveList.Items
-	return as, nil
+	return archiveList.Items, nil
 }
 
 func decodeSessionId(body []byte) (s string, err error) {
-	var xmlSessions XmlSessions
-	err = xml.Unmarshal(body, &xmlSessions)
-
-	if err != nil {
+	var xmlSessions xmlSessions
+	if err = xml.Unmarshal(body, &xmlSessions); err != nil {
 		return "", err
 	}
-
 	return xmlSessions.Sessions[0].SessionId, nil
 }
 
@@ -57,14 +51,13 @@ func encode64(data string) string {
 	return encoder.EncodeToString([]byte(data))
 }
 
-func encodeHMAC(data string, key string) string {
-	hash := hmac.New(sha1.New, []byte(key))
-	hash.Write([]byte(data))
+func encodeHMAC(data []byte, key []byte) string {
+	hash := hmac.New(sha1.New, key)
+	hash.Write(data)
 	mac := hash.Sum(nil)
 
 	return hex.EncodeToString(mac)
 }
-
 
 // Used to decode a session id for testing purposes
 func decode64(data string) (output string, err error) {
@@ -73,14 +66,14 @@ func decode64(data string) (output string, err error) {
 		decoded []byte
 	)
 
-	for i := 0; i < 4; i ++ {
+	for i := 0; i < 4; i++ {
+		// We have to retry with different values
 		decoded, err = decoder.DecodeString(data)
 		if err == nil {
 			break
 		}
 		data += "="
 	}
-
 	if err != nil {
 		return "", err
 	}

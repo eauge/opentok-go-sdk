@@ -117,7 +117,7 @@ func TestCreateRoutedSessionWithLocation(t *testing.T) {
 	}
 }
 
-func TestGenerateTokenWithoutSession(t *testing.T) {
+func TestTokenWithoutSession(t *testing.T) {
 	options := SessionOptions{}
 	session, err := createSessionHelper(options)
 
@@ -126,269 +126,63 @@ func TestGenerateTokenWithoutSession(t *testing.T) {
 		return
 	}
 
-	if _, err = session.GenerateToken(TokenProperties{}); err == nil {
+	if _, err = session.Token(TokenProperties{}); err == nil {
 		t.Error("Token should not be generated if session has not been created")
 		return
 	}
 }
 
-func TestGenerateToken(t *testing.T) {
-	session, err := createSessionHelper(SessionOptions{})
-
-	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
-	}
-
-	if err = session.Create(); err != nil {
-		t.Error(fmt.Sprintf("Session should have been created : %s", err))
-		return
-	}
-
-	var (
-		token           Token
-		tokenProperties = TokenProperties{}
-	)
-	if token, err = session.GenerateToken(tokenProperties); err != nil {
-		t.Error(fmt.Sprintf("Token could not be generated : %s", err))
-		return
-	}
-
-	var decodedToken map[string]string
-	decodedToken, err = decodeToken(token)
-	if len(decodedToken) == 0 {
-		t.Error("Decoded token should have more than one field")
-		return
-	}
-
-	var decodedPartnerId int
-	decodedPartnerId, err = strconv.Atoi(decodedToken["partner_id"])
-	if err != nil {
-		t.Error("Partner id could not be decoded from token")
-		return
-	}
-
-	if decodedToken["session_id"] != session.Id || decodedToken["role"] != string(Publisher) ||
-		decodedPartnerId != apiKey {
-		t.Error("Parameters in token inconsistent with properties provided")
-		return
+func TestToken(t *testing.T) {
+	if err := testToken(TokenProperties{}); err != nil {
+		t.Fatal(err)
 	}
 }
 
 func TestGenerateSubscriberToken(t *testing.T) {
-	session, err := createSessionHelper(SessionOptions{})
-
-	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
-	}
-
-	if err = session.Create(); err != nil {
-		t.Error(fmt.Sprintf("Session should have been created : %s", err))
-		return
-	}
-
-	var (
-		token           Token
-		tokenProperties = TokenProperties{Role: Subscriber}
-	)
-	if token, err = session.GenerateToken(tokenProperties); err != nil {
-		t.Error(fmt.Sprintf("Token could not be generated : %s", err))
-		return
-	}
-
-	var decodedToken map[string]string
-	decodedToken, err = decodeToken(token)
-	if len(decodedToken) == 0 {
-		t.Error("Decoded token should have more than one field")
-		return
-	}
-
-	var decodedPartnerId int
-	decodedPartnerId, err = strconv.Atoi(decodedToken["partner_id"])
-	if err != nil {
-		t.Error("Partner id could not be decoded from token")
-		return
-	}
-
-	if decodedToken["session_id"] != session.Id || decodedToken["role"] != string(Subscriber) ||
-		decodedPartnerId != apiKey {
-		t.Error("Parameters in token inconsistent with properties provided")
-		return
+	if err := testToken(TokenProperties{Role: Subscriber}); err != nil {
+		t.Fatal("Could not generate token " + err.Error())
 	}
 }
 
 func TestGenerateModeratorToken(t *testing.T) {
-	session, err := createSessionHelper(SessionOptions{})
-
-	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
-	}
-
-	if err = session.Create(); err != nil {
-		t.Error(fmt.Sprintf("Session should have been created : %s", err))
-		return
-	}
-
-	var (
-		token           Token
-		tokenProperties = TokenProperties{Role: Moderator}
-	)
-	if token, err = session.GenerateToken(tokenProperties); err != nil {
-		t.Error(fmt.Sprintf("Token could not be generated : %s", err))
-		return
-	}
-
-	var decodedToken map[string]string
-	decodedToken, err = decodeToken(token)
-	if len(decodedToken) == 0 {
-		t.Error("Decoded token should have more than one field")
-		return
-	}
-
-	var decodedPartnerId int
-	decodedPartnerId, err = strconv.Atoi(decodedToken["partner_id"])
-	if err != nil {
-		t.Error("Partner id could not be decoded from token")
-		return
-	}
-
-	if decodedToken["session_id"] != session.Id || decodedToken["role"] != string(Moderator) ||
-		decodedPartnerId != apiKey {
-		t.Error("Parameters in token inconsistent with properties provided")
-		return
+	if err := testToken(TokenProperties{Role: Moderator}); err != nil {
+		t.Fatal("Could not generate token " + err.Error())
 	}
 }
 
-func TestGenerateTokenWithExpiration(t *testing.T) {
-	session, err := createSessionHelper(SessionOptions{})
-
-	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
-	}
-
-	if err = session.Create(); err != nil {
-		t.Error(fmt.Sprintf("Session should have been created : %s", err))
-		return
-	}
-
-	var (
-		token           Token
-		expireTime      = time.Now().Unix() + 1000
-		tokenProperties = TokenProperties{ExpireTime: expireTime}
-	)
-	if token, err = session.GenerateToken(tokenProperties); err != nil {
-		t.Error(fmt.Sprintf("Token could not be generated : %s", err))
-		return
-	}
-
-	var decodedToken map[string]string
-	decodedToken, err = decodeToken(token)
-	if len(decodedToken) == 0 {
-		t.Error("Decoded token should have more than one field")
-		return
-	}
-
-	var decodedPartnerId int
-	decodedPartnerId, err = strconv.Atoi(decodedToken["partner_id"])
-	if err != nil {
-		t.Error("Partner id could not be decoded from token")
-		return
-	}
-
-	var expireTimeNew int64
-	expireTimeNew, err = strconv.ParseInt(decodedToken["expire_time"], 10, 64)
-	if err != nil {
-		t.Error("ExpireTime could not be decoded from token")
-		return
-	}
-
-	if decodedToken["session_id"] != session.Id || decodedToken["role"] != string(Publisher) ||
-		decodedPartnerId != apiKey || expireTimeNew != expireTime {
-		t.Error("Parameters in token inconsistent with properties provided")
-		return
+func TestTokenWithExpiration(t *testing.T) {
+	if err := testToken(TokenProperties{ExpireTime: 1000}); err != nil {
+		t.Fatal("Could not generate token " + err.Error())
 	}
 }
 
-func TestGenerateTokenWithData(t *testing.T) {
-	session, err := createSessionHelper(SessionOptions{})
-
-	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
+func TestTokenWithNegativeExpiration(t *testing.T) {
+	if err := testToken(TokenProperties{ExpireTime: -1000}); err == nil {
+		t.Fatal("Could generate token with negative expire time ")
 	}
+}
 
-	if err = session.Create(); err != nil {
-		t.Error(fmt.Sprintf("Session should have been created : %s", err))
-		return
-	}
-
-	var (
-		token           Token
-		data            = "This is data for the token"
-		tokenProperties = TokenProperties{Data: data}
-	)
-	if token, err = session.GenerateToken(tokenProperties); err != nil {
-		t.Error(fmt.Sprintf("Token could not be generated : %s", err))
-		return
-	}
-
-	var decodedToken map[string]string
-	decodedToken, err = decodeToken(token)
-	if len(decodedToken) == 0 {
-		t.Error("Decoded token should have more than one field")
-		return
-	}
-
-	var decodedPartnerId int
-	decodedPartnerId, err = strconv.Atoi(decodedToken["partner_id"])
-	if err != nil {
-		t.Error("Partner id could not be decoded from token")
-		return
-	}
-
-	if decodedToken["session_id"] != session.Id || decodedToken["role"] != string(Publisher) ||
-		decodedPartnerId != apiKey || data != decodedToken["connection_data"] {
-		t.Error("Parameters in token inconsistent with properties provided")
-		return
+func TestTokenWithData(t *testing.T) {
+	if err := testToken(TokenProperties{Data: "This is data"}); err != nil {
+		t.Fatal("Could generate token with token data " + err.Error())
 	}
 }
 
 func TestStartArchive(t *testing.T) {
-	session, err := createSessionHelper(SessionOptions{})
+	session, _ := createSessionHelper(SessionOptions{})
+	_ = session.Create()
 
-	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
-	}
-
-	if err = session.Create(); err != nil {
-		t.Error(fmt.Sprintf("Session should have been created : %s", err))
-		return
-	}
-
-	if _, err = session.StartArchive("name"); err == nil {
+	if _, err := session.StartArchive("name"); err == nil {
 		t.Error(fmt.Sprintf("StartArchive should fail without connections"))
 		return
 	}
 }
 
 func TestStopArchive(t *testing.T) {
-	session, err := createSessionHelper(SessionOptions{})
+	session, _ := createSessionHelper(SessionOptions{})
+	_ = session.Create()
 
-	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
-	}
-
-	if err = session.Create(); err != nil {
-		t.Error(fmt.Sprintf("Session should have been created"))
-		return
-	}
-
-	if _, err = session.StopArchive("ArchiveId"); err == nil {
+	if _, err := session.StopArchive("ArchiveId"); err == nil {
 		t.Error(fmt.Sprintf("StopArchive should fail without connections"))
 		return
 	}
@@ -404,7 +198,6 @@ func TestGetArchive(t *testing.T) {
 
 func TestDeleteArchive(t *testing.T) {
 	ot := OpenTok{ApiKey: apiKey, ApiSecret: apiSecret, apiUrl: apiUrl}
-
 	if err := DeleteArchive(ot, "ArchiveId"); err == nil {
 		t.Error(fmt.Sprintf("Should fail to delete an archive that does not exist"))
 		return
@@ -430,8 +223,8 @@ func createSessionHelper(options SessionOptions) (s *Session, err error) {
 	return s, nil
 }
 
-func decodeToken(token Token) (map[string]string, error) {
-	var tokenString = string(token)
+func decodeToken(token *Token) (map[string]string, error) {
+	var tokenString = token.Value()
 
 	if len(tokenString) == 0 {
 		return nil, errors.New("Token is an empty string")
@@ -461,6 +254,40 @@ func decodeToken(token Token) (map[string]string, error) {
 	}
 
 	return parameters, nil
+}
+
+func testToken(prop TokenProperties) error {
+	var (
+		token *Token
+		err   error
+	)
+	session, _ := createSessionHelper(SessionOptions{})
+	_ = session.Create()
+	if token, err = session.Token(prop); err != nil {
+		return errors.New("Token could not be generated " + err.Error())
+	}
+
+	tokenMap, _ := decodeToken(token)
+	if decodedApiKey, _ := strconv.Atoi(tokenMap["partner_id"]); decodedApiKey != apiKey {
+		return fatal("Token does not have valid api key", apiKey, decodedApiKey)
+	}
+	decodedExpireTime, _ := strconv.Atoi(tokenMap["expire_time"])
+	expireTime := int64(prop.ExpireTime)
+	if expireTime == 0 {
+		expireTime = 24 * 60 * 60
+	}
+	if int64(decodedExpireTime) != time.Now().Unix()+expireTime {
+		return fatal("Expire time does not match", decodedExpireTime, prop.ExpireTime)
+	}
+	switch {
+	case tokenMap["session_id"] != session.Id:
+		return fatal("Invalid sessionId found ", tokenMap["session_id"], session.Id)
+	case tokenMap["role"] != prop.Role.get():
+		return fatal("Invalid role found ", tokenMap["role"], prop.Role.get())
+	case prop.Data != tokenMap["connection_data"]:
+		return fatal("Connection data is different ", prop.Data, tokenMap["connection_data"])
+	}
+	return nil
 }
 
 func validateSession(session *Session) (err error) {
@@ -517,4 +344,8 @@ func readStringVariable(variable string, mandatory bool) string {
 	}
 
 	return value
+}
+
+func fatal(msg string, expected, got interface{}) error {
+	return errors.New(fmt.Sprintf(msg, expected, " => ", got))
 }

@@ -97,7 +97,6 @@ func (self *httpClient) createRequest(method, url string, headers,
 			r.Header.Add(key, value)
 		}
 	}
-
 	return r, nil
 }
 
@@ -119,18 +118,19 @@ func sendData(method, url string, headers, data map[string]string) (r *http.Requ
 func processPostData(data map[string]string, contentType string) (string, error) {
 	if contentType == "application/x-www-form-urlencoded" {
 		return dataToQueryString(data), nil
-	} else {
-		return dataToJson(data)
 	}
+	return dataToJson(data)
 }
 
 func dataToJson(data map[string]string) (string, error) {
-	var dataBytes, err = json.Marshal(data)
+	var (
+		dataBytes []byte
+		err error
+	)
 
-	if err != nil {
+	if dataBytes, err = json.Marshal(data); err != nil {
 		return "", err
 	}
-
 	return string(dataBytes), nil
 }
 
