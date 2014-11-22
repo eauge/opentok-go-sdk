@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -16,6 +14,7 @@ type httpClient struct {
 	apiKey    int
 	apiSecret string
 	apiUrl    string
+	client    func() *http.Client
 }
 
 func newHttpClient(ot OpenTok) (c *httpClient) {
@@ -28,57 +27,49 @@ func newHttpClient(ot OpenTok) (c *httpClient) {
 		c.apiUrl = "https://api.opentok.com"
 	}
 
+	if ot.AppEngine {
+		c.client = clientWithTransport
+	} else {
+		c.client = clientWithoutTransport
+	}
 	return c
 }
 
-func (self *httpClient) get(url string, headers map[string]string) ([]byte, error) {
-	return self.doRequest("GET", self.apiUrl+"/"+url, headers, nil)
+func (c *httpClient) Get(url string, headers map[string]string) (*http.Response, error) {
+	return c.request("GET", c.apiUrl+"/"+url, headers, nil)
 }
 
-func (self *httpClient) post(url string, headers, data map[string]string) ([]byte, error) {
-	return self.doRequest("POST", self.apiUrl+"/"+url, headers, data)
+func (c *httpClient) Post(url string, headers, data map[string]string) (*http.Response, error) {
+	return c.request("POST", c.apiUrl+"/"+url, headers, data)
 }
 
-func (self *httpClient) delete(url string, headers map[string]string) error {
-	var _, err = self.doRequest("DELETE", self.apiUrl+"/"+url, headers, nil)
+func (c *httpClient) Delete(url string, headers map[string]string) error {
+	var _, err = c.request("DELETE", c.apiUrl+"/"+url, headers, nil)
 	return err
 }
 
-func (self *httpClient) doRequest(method, url string, headers,
-	data map[string]string) (b []byte, err error) {
+func (c *httpClient) request(method, url string, headers,
+	data map[string]string) (res *http.Response, err error) {
 
-	var request *http.Request
-	request, err = self.createRequest(method, url, headers, data)
-
-	if err != nil {
+	var (
+		req    *http.Request
+		client = c.client()
+	)
+	if req, err = c.createRequest(method, url, headers, data); err != nil {
+		return nil, err
+	}
+	if res, err = client.Do(req); err != nil {
 		return nil, err
 	}
 
-	var client = &http.Client{}
-	var response *http.Response
-
-	response, err = client.Do(request)
-
-	if err != nil {
-		return nil, err
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		return nil, errors.New(fmt.Sprintf("Invalid response received from the server: %d", res.StatusCode))
 	}
 
-	if response.StatusCode < 200 || response.StatusCode > 299 {
-		return nil, errors.New(fmt.Sprintf("Invalid response received from the server: %d", response.StatusCode))
-	}
-
-	return self.processResponse(response.Body)
+	return res, nil
 }
 
-func (self *httpClient) processResponse(body io.Reader) (b []byte, err error) {
-	b, err = ioutil.ReadAll(body)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-func (self *httpClient) createRequest(method, url string, headers,
+func (c *httpClient) createRequest(method, url string, headers,
 	data map[string]string) (r *http.Request, err error) {
 
 	r, err = sendData(method, url, headers, data)
@@ -87,7 +78,7 @@ func (self *httpClient) createRequest(method, url string, headers,
 	}
 
 	// Adding headers common to all requests
-	for key, value := range self.getCommonHeaders() {
+	for key, value := range c.getCommonHeaders() {
 		r.Header.Add(key, value)
 	}
 
@@ -125,7 +116,7 @@ func processPostData(data map[string]string, contentType string) (string, error)
 func dataToJson(data map[string]string) (string, error) {
 	var (
 		dataBytes []byte
-		err error
+		err       error
 	)
 
 	if dataBytes, err = json.Marshal(data); err != nil {
@@ -143,11 +134,20 @@ func dataToQueryString(data map[string]string) string {
 	return params.Encode()
 }
 
-func (self *httpClient) getCommonHeaders() map[string]string {
-	var partnerAuth = strconv.Itoa(self.apiKey) + ":" + self.apiSecret
+func (c *httpClient) getCommonHeaders() map[string]string {
+	var partnerAuth = strconv.Itoa(c.apiKey) + ":" + c.apiSecret
 
 	return map[string]string{
 		"X-TB-PARTNER-AUTH": partnerAuth,
 		"X-TB-VERSION":      "1",
 	}
+}
+
+func clientWithoutTransport() *http.Client {
+	return &http.Client{}
+}
+
+func clientWithTransport() *http.Client {
+	transport := http.Transport{}
+	return &http.Client{Transport: &transport}
 }

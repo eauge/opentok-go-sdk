@@ -18,6 +18,11 @@ type OpenTok struct {
 	// creating a project with the OpenTok Dashboard
 	ApiSecret string
 
+	// If true, the http client used will use
+	// http.Transport{} to make sure it works with
+	// AppEngine
+	AppEngine bool
+
 	// This is just used internally to test the sdk
 	// for the different environments
 	apiUrl string
@@ -88,17 +93,17 @@ func validate(ot OpenTok) error {
 
 // Retrieves an archive from the server. If the
 // archive does not exist an error will be raised
-func GetArchive(ot OpenTok, archiveId string) (archive Archive, err error) {
+func GetArchive(ot OpenTok, archiveId string) (archive *Archive, err error) {
 	if archiveId == "" {
-		return Archive{}, errors.New("Archive id cannot be empty")
+		return nil, errors.New("Archive id cannot be empty")
 	}
 
 	client := newHttpClient(ot)
 	url := fmt.Sprintf("v2/partner/%d/archive/%s", ot.ApiKey, archiveId)
-	response, err := client.get(url, nil)
+	response, err := client.Get(url, nil)
 
 	if err != nil {
-		return Archive{}, err
+		return nil, err
 	}
 
 	return decodeArchive(response)
@@ -113,7 +118,7 @@ func DeleteArchive(ot OpenTok, archiveId string) error {
 	}
 	client := newHttpClient(ot)
 	url := fmt.Sprintf("v2/partner/%d/archive/%s", ot.ApiKey, archiveId)
-	return client.delete(url, nil)
+	return client.Delete(url, nil)
 }
 
 // Returns a list of archives. If Count == 0, the limit of
@@ -131,7 +136,7 @@ func ListArchives(ot OpenTok, count, offset int) ([]Archive, error) {
 		url = fmt.Sprintf("%s&count=%d", url, count)
 	}
 
-	response, err := client.get(url, nil)
+	response, err := client.Get(url, nil)
 	if err != nil {
 		return nil, err
 	}

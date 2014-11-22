@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
+	"net/http"
 )
 
 type xmlSessions struct {
@@ -21,26 +22,25 @@ type xmlSession struct {
 	CreateDate string   `xml:"create_dt"`
 }
 
-func decodeArchive(body []byte) (archive Archive, err error) {
-	err = json.Unmarshal(body, &archive)
-
-	if err != nil {
-		return Archive{}, err
+func decodeArchive(res *http.Response) (archive *Archive, err error) {
+	archive = new(Archive)
+	if err = json.NewDecoder(res.Body).Decode(archive); err != nil {
+		return nil, err
 	}
 	return archive, nil
 }
 
-func decodeArchiveList(body []byte) (as []Archive, err error) {
+func decodeArchiveList(res *http.Response) ([]Archive, error) {
 	var archiveList archiveList
-	if err = json.Unmarshal(body, &archiveList); err != nil {
+	if err := json.NewDecoder(res.Body).Decode(&archiveList); err != nil {
 		return nil, err
 	}
 	return archiveList.Items, nil
 }
 
-func decodeSessionId(body []byte) (s string, err error) {
+func decodeSessionId(res *http.Response) (s string, err error) {
 	var xmlSessions xmlSessions
-	if err = xml.Unmarshal(body, &xmlSessions); err != nil {
+	if err = xml.NewDecoder(res.Body).Decode(&xmlSessions); err != nil {
 		return "", err
 	}
 	return xmlSessions.Sessions[0].SessionId, nil
