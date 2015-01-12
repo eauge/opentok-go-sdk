@@ -230,7 +230,7 @@ func (s *Session) StartArchive(name string) (archive *Archive, err error) {
 		return nil, err
 	}
 
-	if archive, err = decodeArchive(res); err != nil {
+	if archive, err = decodeArchive(res.Body); err != nil {
 		return nil, errors.New(fmt.Sprintf("Archive could not be decoded successfully"))
 	}
 	return archive, nil
@@ -256,7 +256,7 @@ func (s *Session) StopArchive(archiveId string) (a *Archive, err error) {
 	if res, err = s.client.Post(url, headers, nil); err != nil {
 		return nil, err
 	}
-	if a, err = decodeArchive(res); err != nil {
+	if a, err = decodeArchive(res.Body); err != nil {
 		return nil, errors.New(fmt.Sprintf("Archive could not be decoded successfully"))
 	}
 	return a, nil
@@ -296,7 +296,7 @@ func (s *Session) allocateSession() (id string, err error) {
 // Reads an allocation response and returns the id of the
 // allocated session
 func readAllocateResponse(res *http.Response) (id string, err error) {
-	id, err = decodeSessionId(res)
+	id, err = decodeSessionId(res.Body)
 	if err != nil {
 		return "", err
 	}

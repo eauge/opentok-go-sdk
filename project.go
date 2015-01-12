@@ -106,7 +106,7 @@ func GetArchive(ot OpenTok, archiveId string) (archive *Archive, err error) {
 		return nil, err
 	}
 
-	return decodeArchive(response)
+	return decodeArchive(response.Body)
 }
 
 // Deletes an existing archive with status available. If
@@ -141,5 +141,5 @@ func ListArchives(ot OpenTok, count, offset int) ([]Archive, error) {
 		return nil, err
 	}
 
-	return decodeArchiveList(response)
+	return decodeArchiveList(response.Body)
 }
