@@ -1,351 +1,524 @@
 package opentok
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
+
+	"github.com/eauge/opentok-go-sdk/helpers"
 )
 
-var (
-	apiKey    = readIntVariable("API_KEY", true)
-	apiSecret = readStringVariable("API_SECRET", true)
-	apiUrl    = readStringVariable("API_URL", false)
-)
+var apiKey int
+var apiSecret string
+var sessionID string
+var archiveID string
+var partnerAuth string
 
-func TestOpenTok(t *testing.T) {
-	ot := OpenTok{ApiKey: apiKey, ApiSecret: apiSecret}
-	if err := validate(ot); err != nil {
-		t.Error(fmt.Sprintf("Opentok was not validated : %s", err))
-		return
+func TestMain(m *testing.M) {
+	apiKey = 123456
+	apiSecret = "API_SECRET"
+	sessionID = "sessionId"
+	archiveID = "archiveId"
+	partnerAuth = fmt.Sprintf("%d:%s", apiKey, apiSecret)
+	os.Exit(m.Run())
+}
+
+func TestNew(t *testing.T) {
+	ot := New(apiKey, apiSecret)
+
+	if ot.APIKey != apiKey {
+		t.Fatalf("Different apikeys: expected: %d, in object: %d",
+			apiKey, ot.APIKey)
+	}
+	if ot.APISecret != apiSecret {
+		t.Fatalf("Different apisecrets: expected: %s, in object: %s",
+			apiSecret, ot.APISecret)
+	}
+	if ot.client == nil {
+		t.Fatalf("httpClient should not be nil")
 	}
 }
 
-func TestInvalidOpenTok(t *testing.T) {
-	ot := OpenTok{}
-	if err := validate(ot); err == nil {
-		t.Error(fmt.Sprintf("Invalid Opentok has been validated as correct"))
-		return
+func TestNewPartnerAuth(t *testing.T) {
+	ot := New(apiKey, apiSecret)
+	partnerAuth := fmt.Sprintf("%d:%s", apiKey, apiSecret)
+	if partnerAuth != ot.partnerAuth {
+		t.Fatalf("Different partnerauths: expected: %s, in object: %s",
+			partnerAuth, ot.partnerAuth)
 	}
 }
 
-func TestCreateSession(t *testing.T) {
-	options := SessionOptions{}
-	session, err := createSessionHelper(options)
+func TestNewWithAppEngine(t *testing.T) {
+	ot := NewWithAppEngine(apiKey, apiSecret)
+
+	if ot.APIKey != apiKey {
+		t.Fatalf("Different apikeys: expected: %d, in object: %d",
+			apiKey, ot.APIKey)
+	}
+	if ot.APISecret != apiSecret {
+		t.Fatalf("Different apisecrets: expected: %s, in object: %s",
+			apiSecret, ot.APISecret)
+	}
+	if ot.client == nil {
+		t.Fatalf("httpClient should not be nil")
+	}
+}
+
+func TestSession(t *testing.T) {
+	req := helpers.Session().Request(make(map[string]string)).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	res := helpers.Session().ValidResponse(sessionID, apiKey)
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	session, err := ot.Session(&SessionProps{})
 
 	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
+		t.Fatalf("Expected err to be nil: %s", err)
 	}
-
-	if err = session.Create(); err != nil {
-		t.Error(fmt.Sprintf("Session should have been created : %s", err))
-		return
+	if session == nil {
+		t.Fatalf("Session should not be nil")
 	}
-
-	if err = validateSession(session); err != nil {
-		t.Error(fmt.Sprintf("Session id is not valid : %s", err))
-		return
+	if session.ID != sessionID {
+		t.Fatalf("Unexpected sessionId: expected: %s, received: %s",
+			sessionID, session.ID)
 	}
 }
 
-func TestCreateRelayedSession(t *testing.T) {
-	options := SessionOptions{MediaMode: Relayed}
-	session, err := createSessionHelper(options)
+func TestSessionWithNil(t *testing.T) {
+	req := helpers.Session().Request(make(map[string]string)).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	res := helpers.Session().ValidResponse(sessionID, apiKey)
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	session, err := ot.Session(nil)
 
 	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
+		t.Fatalf("Expected err to be nil: %s", err)
 	}
-
-	if err = session.Create(); err != nil {
-		t.Error(fmt.Sprintf("Session should have been created : %s", err))
-		return
+	if session == nil {
+		t.Fatalf("Session should not be nil")
 	}
-
-	if err = validateSession(session); err != nil {
-		t.Error(fmt.Sprintf("Session id is not valid : %s", err))
-		return
+	if session.ID != sessionID {
+		t.Fatalf("Unexpected sessionId: expected: %s, received: %s",
+			sessionID, session.ID)
 	}
 }
 
-func TestCreateRoutedSession(t *testing.T) {
-	options := SessionOptions{MediaMode: Routed}
-	session, err := createSessionHelper(options)
+func TestSessionWithLocation(t *testing.T) {
+	req := helpers.Session().Request(map[string]string{
+		"location": "127.0.0.1",
+	}).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	res := helpers.Session().ValidResponse(sessionID, apiKey)
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	session, err := ot.Session(&SessionProps{Location: "127.0.0.1"})
 
 	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
+		t.Fatalf("Expected err to be nil: %s", err)
 	}
-
-	if err = session.Create(); err != nil {
-		t.Error(fmt.Sprintf("Session should have been created : %s", err))
-		return
+	if session == nil {
+		t.Fatalf("Session should not be nil")
+	}
+	if session.ID != sessionID {
+		t.Fatalf("Unexpected sessionId: expected: %s, received: %s",
+			sessionID, session.ID)
 	}
 }
 
-func TestCreateSessionWithLocation(t *testing.T) {
-	options := SessionOptions{Location: "127.0.0.1"}
-	session, err := createSessionHelper(options)
+func TestSessionWithMediaMode(t *testing.T) {
+	req := helpers.Session().Request(map[string]string{
+		"p2p.preference": "enabled",
+	}).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	res := helpers.Session().ValidResponse(sessionID, apiKey)
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	session, err := ot.Session(&SessionProps{MediaMode: "enabled"})
 
 	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
+		t.Fatalf("Expected err to be nil: %s", err)
 	}
-
-	if err = session.Create(); err != nil {
-		t.Error(fmt.Sprintf("Session should have been created : %s", err))
-		return
+	if session == nil {
+		t.Fatalf("Session should not be nil")
+	}
+	if session.ID != sessionID {
+		t.Fatalf("Unexpected sessionId: expected: %s, received: %s",
+			sessionID, session.ID)
 	}
 }
 
-func TestCreateRoutedSessionWithLocation(t *testing.T) {
-	options := SessionOptions{MediaMode: Routed, Location: "127.0.0.1"}
-	session, err := createSessionHelper(options)
+func TestSessionWithArchiveMode(t *testing.T) {
+	req := helpers.Session().Request(map[string]string{
+		"archiveMode": "always",
+	}).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	res := helpers.Session().ValidResponse(sessionID, apiKey)
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	session, err := ot.Session(&SessionProps{ArchiveMode: "always"})
 
 	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
+		t.Fatalf("Expected err to be nil: %s", err)
 	}
-
-	if err = session.Create(); err != nil {
-		t.Error(fmt.Sprintf("Session should have been created : %s", err))
-		return
+	if session == nil {
+		t.Fatalf("Session should not be nil")
+	}
+	if session.ID != sessionID {
+		t.Fatalf("Unexpected sessionId: expected: %s, received: %s",
+			sessionID, session.ID)
 	}
 }
 
-func TestTokenWithoutSession(t *testing.T) {
-	options := SessionOptions{}
-	session, err := createSessionHelper(options)
+func TestSessionWithAllProps(t *testing.T) {
+	req := helpers.Session().Request(map[string]string{
+		"archiveMode":    "always",
+		"location":       "127.0.0.1",
+		"p2p.preference": "enabled",
+	}).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	res := helpers.Session().ValidResponse(sessionID, apiKey)
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	session, err := ot.Session(&SessionProps{
+		ArchiveMode: "always",
+		Location:    "127.0.0.1",
+		MediaMode:   "enabled",
+	})
 
 	if err != nil {
-		t.Error(fmt.Sprintf("Session object should have been initialized : %s", err))
-		return
+		t.Fatalf("Expected err to be nil: %s", err)
 	}
+	if session == nil {
+		t.Fatalf("Session should not be nil")
+	}
+	if session.ID != sessionID {
+		t.Fatalf("Unexpected sessionId: expected: %s, received: %s",
+			sessionID, session.ID)
+	}
+}
 
-	if _, err = session.Token(TokenProperties{}); err == nil {
-		t.Error("Token should not be generated if session has not been created")
-		return
+func TestSessionInvalidAuth(t *testing.T) {
+	req := helpers.Session().Request(make(map[string]string))
+	res := helpers.Session().InvalidResponseNoAuth()
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	session, err := ot.Session(&SessionProps{})
+	if session != nil {
+		t.Fatalf("Session should be nil")
+	}
+	if err == nil {
+		t.Fatalf("Expected err not to be nil: %s", err)
+	}
+	if match, _ := regexp.Match("403", []byte(err.Error())); !match {
+		t.Fatalf("Unexpected error: %s", err)
 	}
 }
 
 func TestToken(t *testing.T) {
-	if err := testToken(TokenProperties{}); err != nil {
-		t.Fatal(err)
-	}
-}
+	ot := New(apiKey, apiSecret)
+	session := &Session{ID: sessionID}
 
-func TestGenerateSubscriberToken(t *testing.T) {
-	if err := testToken(TokenProperties{Role: Subscriber}); err != nil {
-		t.Fatal("Could not generate token " + err.Error())
-	}
-}
-
-func TestGenerateModeratorToken(t *testing.T) {
-	if err := testToken(TokenProperties{Role: Moderator}); err != nil {
-		t.Fatal("Could not generate token " + err.Error())
-	}
-}
-
-func TestTokenWithExpiration(t *testing.T) {
-	if err := testToken(TokenProperties{ExpireTime: 1000}); err != nil {
-		t.Fatal("Could not generate token " + err.Error())
-	}
-}
-
-func TestTokenWithNegativeExpiration(t *testing.T) {
-	if err := testToken(TokenProperties{ExpireTime: -1000}); err == nil {
-		t.Fatal("Could generate token with negative expire time ")
-	}
-}
-
-func TestTokenWithData(t *testing.T) {
-	if err := testToken(TokenProperties{Data: "This is data"}); err != nil {
-		t.Fatal("Could generate token with token data " + err.Error())
-	}
-}
-
-func TestStartArchive(t *testing.T) {
-	session, _ := createSessionHelper(SessionOptions{})
-	_ = session.Create()
-
-	if _, err := session.StartArchive("name"); err == nil {
-		t.Error(fmt.Sprintf("StartArchive should fail without connections"))
-		return
-	}
-}
-
-func TestStopArchive(t *testing.T) {
-	session, _ := createSessionHelper(SessionOptions{})
-	_ = session.Create()
-
-	if _, err := session.StopArchive("ArchiveId"); err == nil {
-		t.Error(fmt.Sprintf("StopArchive should fail without connections"))
-		return
-	}
-}
-
-func TestGetArchive(t *testing.T) {
-	ot := OpenTok{ApiKey: apiKey, ApiSecret: apiSecret, apiUrl: apiUrl}
-	if _, err := GetArchive(ot, "ArchiveId"); err == nil {
-		t.Error(fmt.Sprintf("GetArchive should fail for an archive that does not exist"))
-		return
-	}
-}
-
-func TestDeleteArchive(t *testing.T) {
-	ot := OpenTok{ApiKey: apiKey, ApiSecret: apiSecret, apiUrl: apiUrl}
-	if err := DeleteArchive(ot, "ArchiveId"); err == nil {
-		t.Error(fmt.Sprintf("Should fail to delete an archive that does not exist"))
-		return
-	}
-}
-
-func TestListArchives(t *testing.T) {
-	ot := OpenTok{ApiKey: apiKey, ApiSecret: apiSecret, apiUrl: apiUrl}
-	if archives, err := ListArchives(ot, 0, 100); err != nil || len(archives) < 0 {
-		t.Error(fmt.Sprintf("Should return a list of archives"))
-		return
-	}
-}
-
-func createSessionHelper(options SessionOptions) (s *Session, err error) {
-	var (
-		opentok = OpenTok{ApiKey: apiKey, ApiSecret: apiSecret, apiUrl: apiUrl}
-	)
-
-	if s, err = NewSession(opentok, options); err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-func decodeToken(token *Token) (map[string]string, error) {
-	var tokenString = token.String()
-
-	if len(tokenString) == 0 {
-		return nil, errors.New("Token is an empty string")
-	}
-	undecodedToken, err := decode64(tokenString[4:])
+	token, err := ot.Token(session, &TokenProps{})
+	decodedMap, _ := helpers.Token().Decode(token.String())
 
 	if err != nil {
-		return nil, errors.New("Error decoding token")
+		t.Fatalf("Err should not be nil: %s", err)
 	}
-
-	var apiKeyAndSignature = strings.Split(undecodedToken, ":")[0]
-	var tokenParameters = strings.Split(undecodedToken, ":")[1]
-
-	var apiKey = strings.Split(apiKeyAndSignature, "&")[0]
-	// var encodedSignature = strings.Split(apiKeyAndSignature, "&")[1]
-
-	var tokenParamsArray = strings.Split(tokenParameters, "&")
-	var parameters map[string]string = map[string]string{
-		strings.Split(apiKey, "=")[0]: strings.Split(apiKey, "=")[1],
+	if decodedMap["partner_id"] != strconv.Itoa(apiKey) {
+		t.Fatalf("Invalid apiKey in token: %s, expected %d",
+			decodedMap["partner_id"], apiKey)
 	}
-
-	for i := 0; i < len(tokenParamsArray); i++ {
-		var param = tokenParamsArray[i]
-		var key = strings.Split(param, "=")[0]
-		var value = strings.Split(param, "=")[1]
-		parameters[key] = value
+	if decodedMap["role"] != string(Publisher) {
+		t.Fatalf("Invalid role in token: %s, expected %s",
+			decodedMap["role"], Publisher)
 	}
-
-	return parameters, nil
+	if decodedMap["session_id"] != sessionID {
+		t.Fatalf("Invalid role in token: %s, expected %s",
+			decodedMap["session_id"], sessionID)
+	}
 }
 
-func testToken(prop TokenProperties) error {
-	var (
-		token *Token
-		err   error
-	)
-	session, _ := createSessionHelper(SessionOptions{})
-	_ = session.Create()
-	if token, err = session.Token(prop); err != nil {
-		return errors.New("Token could not be generated " + err.Error())
-	}
+func TestTokenWithNil(t *testing.T) {
+	ot := New(apiKey, apiSecret)
+	session := &Session{ID: sessionID}
 
-	tokenMap, _ := decodeToken(token)
-	if decodedApiKey, _ := strconv.Atoi(tokenMap["partner_id"]); decodedApiKey != apiKey {
-		return fatal("Token does not have valid api key", apiKey, decodedApiKey)
-	}
-	decodedExpireTime, _ := strconv.Atoi(tokenMap["expire_time"])
-	expireTime := int64(prop.ExpireTime)
-	if expireTime == 0 {
-		expireTime = 24 * 60 * 60
-	}
-	if int64(decodedExpireTime) != time.Now().Unix()+expireTime {
-		return fatal("Expire time does not match", decodedExpireTime, prop.ExpireTime)
-	}
-	switch {
-	case tokenMap["session_id"] != session.Id:
-		return fatal("Invalid sessionId found ", tokenMap["session_id"], session.Id)
-	case tokenMap["role"] != prop.Role.get():
-		return fatal("Invalid role found ", tokenMap["role"], prop.Role.get())
-	case prop.Data != tokenMap["connection_data"]:
-		return fatal("Connection data is different ", prop.Data, tokenMap["connection_data"])
-	}
-	return nil
-}
-
-func validateSession(session *Session) (err error) {
-
-	if session == nil {
-		return errors.New(fmt.Sprintf("Error when decoding session: nil session provided"))
-	}
-	sessionId := session.Id
-	if len(sessionId) < 2 {
-		return errors.New(fmt.Sprintf("Error when decoding session: sessionId is not long enough: %s", sessionId))
-	}
-
-	// remove sentinal (e.g. '1_', '2_')
-	decodedSessionId := sessionId[2:]
-
-	// replace invalid base64 chars
-	decodedSessionId = strings.Replace(decodedSessionId, "-", "+", -1)
-	decodedSessionId = strings.Replace(decodedSessionId, "_", "/", -1)
-	decodedSessionId, err = decode64(decodedSessionId)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Error when decoding session: %s", err))
-	}
-
-	fields := strings.Split(decodedSessionId, "~")
-	var sessionApiKey int
-	sessionApiKey, err = strconv.Atoi(fields[1])
+	token, err := ot.Token(session, nil)
+	decodedMap, _ := helpers.Token().Decode(token.String())
 
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error when decoding session: %s", err))
+		t.Fatalf("Err should not be nil: %s", err)
 	}
-	if sessionApiKey != apiKey {
-		return errors.New("Api keys do not match")
+	if decodedMap["partner_id"] != strconv.Itoa(apiKey) {
+		t.Fatalf("Invalid apiKey in token: %s, expected %d",
+			decodedMap["partner_id"], apiKey)
 	}
-	return nil
+	if decodedMap["role"] != string(Publisher) {
+		t.Fatalf("Invalid role in token: %s, expected %s",
+			decodedMap["role"], Publisher)
+	}
+	if decodedMap["session_id"] != sessionID {
+		t.Fatalf("Invalid role in token: %s, expected %s",
+			decodedMap["session_id"], sessionID)
+	}
 }
 
-func readIntVariable(variable string, mandatory bool) int {
-	value := os.Getenv(variable)
-	if len(value) == 0 && mandatory {
-		panic(fmt.Sprintf("Environment variable : %s expected", variable))
-	}
+func TestTokenWithParams(t *testing.T) {
+	ot := New(apiKey, apiSecret)
+	session := &Session{ID: sessionID}
+	expireTime := time.Now().Unix() + 60
+	data := "Some data"
+	role := Subscriber
 
-	intValue, err := strconv.Atoi(value)
+	token, err := ot.Token(session, &TokenProps{
+		ExpireTime: expireTime,
+		Data:       data,
+		Role:       role,
+	})
+	decodedMap, _ := helpers.Token().Decode(token.String())
+
 	if err != nil {
-		panic(fmt.Sprintf("Environment variable : %s was expected to be an integer : %s", variable, err))
+		t.Fatalf("Err should not be nil: %s", err)
 	}
-	return intValue
+	if decodedMap["role"] != string(role) {
+		t.Fatalf("Invalid role in token: %s, expected %s",
+			decodedMap["role"], role)
+	}
+	if decodedMap["expire_time"] != strconv.FormatInt(expireTime, 10) {
+		t.Fatalf("Invalid expireTime in token: %s, expected %d",
+			decodedMap["expire_time"], expireTime)
+	}
+	if decodedMap["connection_data"] != data {
+		t.Fatalf("Invalid connectionData in token: %s, expected %s",
+			decodedMap["connection_data"], data)
+	}
 }
 
-func readStringVariable(variable string, mandatory bool) string {
-	value := os.Getenv(variable)
-	if len(value) == 0 && mandatory {
-		panic(fmt.Sprintf("Environment variable : %s expected", variable))
-	}
+func TestTokenFails(t *testing.T) {
+	ot := New(apiKey, apiSecret)
+	session := &Session{}
 
-	return value
+	if _, err := ot.Token(session, &TokenProps{}); err == nil {
+		t.Fatalf("Err should not be nil")
+	}
 }
 
-func fatal(msg string, expected, got interface{}) error {
-	return errors.New(fmt.Sprintf(msg, expected, " => ", got))
+func TestArchiveStart(t *testing.T) {
+	req := helpers.Archive().RequestStart(apiKey, sessionID, nil).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	params := &helpers.ArchiveParams{
+		HasAudio:  true,
+		HasVideo:  true,
+		ID:        archiveID,
+		Name:      "archive",
+		APIKey:    apiKey,
+		SessionID: sessionID,
+		Status:    "started",
+	}
+	res := helpers.Archive().ValidResponseWithArchive(params)
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	archive, err := ot.ArchiveStart(sessionID, &ArchiveProps{
+		SessionID: sessionID,
+		HasAudio:  true,
+		HasVideo:  true,
+	})
+
+	if err != nil {
+		t.Fatalf("Expected err to be nil: %s", err)
+	}
+	if archive == nil {
+		t.Fatalf("Session should not be nil")
+	}
+	if archive.ID != archiveID {
+		t.Fatalf("Unexpected archiveId: expected: %s, received: %s",
+			archiveID, archive.ID)
+	}
+	if !archive.HasAudio {
+		t.Fatalf("archive should have audio")
+	}
+	if !archive.HasVideo {
+		t.Fatalf("archive should have video")
+	}
+	if archive.Name != params.Name {
+		t.Fatalf("err: archive name: %s, expected: %s",
+			archive.Name, params.Name)
+	}
+	if archive.Status != "started" {
+		t.Fatalf("err: unexpected archive status: %s, expected: %s",
+			archive.Status, "started")
+	}
+}
+
+func TestArchiveStartIndividual(t *testing.T) {
+	req := helpers.Archive().RequestStart(apiKey, sessionID, map[string]interface{}{
+		"hasVideo":   false,
+		"outputMode": "individual",
+	}).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	params := &helpers.ArchiveParams{
+		HasAudio:  true,
+		HasVideo:  false,
+		ID:        archiveID,
+		Name:      "archive",
+		APIKey:    apiKey,
+		SessionID: sessionID,
+		Status:    "started",
+	}
+	res := helpers.Archive().ValidResponseWithArchive(params)
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	archive, err := ot.ArchiveStart(sessionID, &ArchiveProps{
+		HasAudio:   true,
+		HasVideo:   false,
+		OutputMode: Individual,
+	})
+
+	if err != nil {
+		t.Fatalf("Expected err to be nil: %s", err)
+	}
+	if archive.HasVideo {
+		t.Fatalf("archive should not have video")
+	}
+}
+
+func TestArchiveStartFails(t *testing.T) {
+	ot := newOpenTokWithClient(apiKey, apiSecret, helpers.NewClient())
+	if _, err := ot.ArchiveStart("", nil); err == nil {
+		t.Fatalf("Error should not be nil")
+	}
+}
+
+func TestArchiveStop(t *testing.T) {
+	req := helpers.Archive().RequestStop(apiKey, archiveID).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	res := helpers.Archive().ValidResponseEmpty()
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	if err := ot.ArchiveStop(archiveID); err != nil {
+		t.Fatalf("Expected err to be nil: %s", err)
+	}
+}
+
+func TestArchiveStopFails(t *testing.T) {
+	req := helpers.Archive().RequestStop(apiKey, archiveID).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	res := helpers.Archive().ValidResponseEmpty()
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	if err := ot.ArchiveStop(""); err == nil {
+		t.Fatalf("Expected err not to be nil")
+	}
+}
+
+func TestArchiveDelete(t *testing.T) {
+	req := helpers.Archive().RequestDelete(apiKey, archiveID).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	res := helpers.Archive().ValidResponseEmpty()
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	if err := ot.ArchiveDelete(archiveID); err != nil {
+		t.Fatalf("Expected err to be nil: %s", err)
+	}
+}
+
+func TestArchiveDeleteFails(t *testing.T) {
+	req := helpers.Archive().RequestDelete(apiKey, archiveID).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	res := helpers.Archive().ValidResponseEmpty()
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	if err := ot.ArchiveDelete(""); err == nil {
+		t.Fatalf("Expected err not to be nil")
+	}
+}
+
+func TestArchiveGet(t *testing.T) {
+	req := helpers.Archive().RequestGet(apiKey, archiveID).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	params := helpers.Archive().DefaultParams()
+	res := helpers.Archive().ValidResponseWithArchive(params)
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	archive, err := ot.ArchiveGet(archiveID)
+
+	if err != nil {
+		t.Fatalf("Expected err to be nil: %s", err)
+	}
+	if archive == nil {
+		t.Fatalf("Session should not be nil")
+	}
+	if archive.ID != archiveID {
+		t.Fatalf("Unexpected archiveId: expected: %s, received: %s",
+			archiveID, archive.ID)
+	}
+}
+
+func TestArchiveGetFails(t *testing.T) {
+	req := helpers.Archive().RequestGet(apiKey, archiveID).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	params := helpers.Archive().DefaultParams()
+	res := helpers.Archive().ValidResponseWithArchive(params)
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	if _, err := ot.ArchiveGet(""); err == nil {
+		t.Fatalf("Expected err not to be nil")
+	}
+}
+
+func TestArchiveList(t *testing.T) {
+	count := 10
+	req := helpers.Archive().RequestList(apiKey, count, 0).
+		AddHeader("X-TB-PARTNER-AUTH", partnerAuth)
+	res := helpers.Archive().ValidResponseWithArchiveList(count)
+	client := helpers.NewClient().
+		Add(req, res)
+	ot := newOpenTokWithClient(apiKey, apiSecret, client)
+
+	archiveList, err := ot.ArchiveList(count, 0)
+	if err != nil {
+		t.Fatalf("Expected err to be nil: %s", err)
+	}
+	if archiveList.Count != count {
+		t.Fatalf("Expected archivelist.Count to equal count: %d, actual: %d",
+			count, archiveList.Count)
+	}
+	if len(archiveList.Archives) != count {
+		t.Logf("archiveList: %v", archiveList)
+		t.Fatalf("Expected archivelist to have length: %d, actual: %d",
+			count, len(archiveList.Archives))
+	}
 }

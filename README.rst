@@ -12,87 +12,76 @@ Before doing anything:
 ----------------------
 The first you must do, is create an OpenTok account at TokBox website:
 https://tokbox.com/
-  
-After signing up, you'll be able to create a project where you'll get an 
+
+After signing up, you'll be able to create a project where you'll get an
 API_KEY and an API_SECRET that you'll be able to use to run the code
 in the section below. Don't run the code below without an API_KEY and
-API_SECRET because it's not going to work. 
+API_SECRET because it's not going to work.
 
+Test your API_KEY
+-----------------
+You can use the cmd utility to test that your API_KEY and your API_SECRET work. The following command will generate a sessionId and a token with your API_KEY and your API_SECRET
+  API_KEY=API_KEY API_SECRET=API_SECRET go run cmd/cmd.go
 
 Testing That Everything Works:
 ------------------------------
 Once you get your API_KEY and API_SECRET, you can make sure that everything
 works by running the tests that come with the SDK::
-
-  API_KEY="*** YOUR API_KEY ***" API_SECRET="*** YOUR API_SECRET ***" go test github.com/eauge/opentok/
+  go test github.com/eauge/opentok/
 
 The Go OpenTok SDK works in combination with an OpenTok client. A developer
 that wants to create a web application will need to add an OpenTok Server SDK
-to her project and use the web client to write the other half of the application. 
+to her project and use the web client to write the other half of the application.
 The web client documentation can be found: https://tokbox.com/opentok/libraries/client/js/
 
 
 How To Get Started:
 --------------------
 You need to import::
-  
+
   import opentok "github.com/eauge/opentok-go-sdk"
 
 And run the code below wrapped in main ::
-  
-	var (
-		apiKey    = 44603982
-		apiSecret = "1963c1345671419ea659b0feaa47b1206471463b"
-		ot        = opentok.OpenTok{ApiKey: apiKey, ApiSecret: apiSecret}
-		session   *opentok.Session
-		token     *opentok.Token
-		err       error
-	)
 
-	if session, err = opentok.NewSession(ot, opentok.SessionOptions{}); err != nil {
-		log.Fatal("Error, session object could not be created: ", err)
-	}
-	if err := session.Create(); err != nil {
-		log.Fatal("Error, session could not be created: ", err)
-	}
-	if token, err = session.Token(opentok.TokenProperties{}); err != nil {
-		log.Fatal("Error in creating token ", err)
+	apiKey := 123456
+	apiSecret := "API_KEY"
+	ot := opentok.New(apiKey, apiSecret)
+
+	s, err := ot.Session(nil)
+	if err != nil {
+		panic(err)
 	}
 
-	// We print the session and the token created
-	fmt.Println("Session created", session.Id)
-	fmt.Println("Token created", token.Value())
-  
-	
+	t, err := ot.Token(s, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("session: ", s.ID)
+	fmt.Println("token: ", t)
+
+
 How Archiving Works:
 --------------------
 Create An Archive::
 
-  archive, err := session.StartArchive("my archive")
+  archive, err := ot.ArchiveStart(session.ID, nil)
 
 Stop An Archive::
 
-  archive, err := session.StopArchive(archive.Id)
+  err := ot.ArchiveStop(archiveId)
 
 Delete An Archive::
 
-  err := opentok.DeleteArchive(archive.Id)
+  err := ot.ArchiveDelete(archiveId)
 
 Get An Archive::
 
-  err := opentok.GetArchive(archive.Id)
+  archive, err := ot.ArchiveGet(archiveId)
 
 List All Archives linked to you API_KEY::
 
-  archives, err := opentok.ListArchives(archive.Id, 0, 0)
-
-Sample Applications:
-----------------
-Find below links to sample applications developed using this sdk:
-
-- `Sample <https://github.com/eauge/opentok-go-sample/>`_ showcasing the most basic functionality of the sdk.
-
-- `Archiving sample <https://github.com/eauge/opentok-go-archiving/>`_ showcasing session creation and archiving.
+  archives, err := ot.ListArchives(0, 0)
 
 What Comes Next:
 ----------------
@@ -100,4 +89,4 @@ The next step is to use the Session and the Token that you have created and
 create an app. Visit https://tokbox.com/opentok/ to learn more about opentok,
 how it works and what you can do with it.
 
-  
+
