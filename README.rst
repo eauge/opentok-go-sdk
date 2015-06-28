@@ -20,8 +20,9 @@ API_SECRET because it's not going to work.
 
 Test your API_KEY
 -----------------
-You can use the cmd utility to test that your API_KEY and your API_SECRET work. The following command will generate a sessionId and a token with your API_KEY and your API_SECRET
-  API_KEY=API_KEY API_SECRET=API_SECRET go run cmd/cmd.go
+You can use the cmd utility to test that your API_KEY and your API_SECRET work.
+The following command will generate a sessionId and a token with your API_KEY and your API_SECRET
+  $ API_KEY=API_KEY API_SECRET=API_SECRET go run cmd/cmd.go
 
 Testing That Everything Works:
 ------------------------------
