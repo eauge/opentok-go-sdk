@@ -127,9 +127,9 @@ func (ot *OpenTok) Session(props *SessionProps) (s *Session, err error) {
 
 // Token generates a token that each client needs to use
 // to be able to connect to an OpenTok Session
-func (ot *OpenTok) Token(s *Session, props *TokenProps) (*Token, error) {
+func (ot *OpenTok) Token(sessionID string, props *TokenProps) (*Token, error) {
 
-	if s == nil || len(s.ID) == 0 {
+	if len(sessionID) == 0 {
 		return nil, fmt.Errorf("Session has not been created. Please use OpenTok.Session")
 	}
 
@@ -137,7 +137,7 @@ func (ot *OpenTok) Token(s *Session, props *TokenProps) (*Token, error) {
 		props = &TokenProps{}
 	}
 
-	key := calcKey(s.ID, props)
+	key := calcKey(sessionID, props)
 	signature := ot.signKey(key)
 
 	buffer := bytes.NewBufferString("")

@@ -234,9 +234,8 @@ func TestSessionInvalidAuth(t *testing.T) {
 
 func TestToken(t *testing.T) {
 	ot := New(apiKey, apiSecret)
-	session := &Session{ID: sessionID}
 
-	token, err := ot.Token(session, &TokenProps{})
+	token, err := ot.Token(sessionID, &TokenProps{})
 	decodedMap, _ := helpers.Token().Decode(token.String())
 
 	if err != nil {
@@ -258,9 +257,8 @@ func TestToken(t *testing.T) {
 
 func TestTokenWithNil(t *testing.T) {
 	ot := New(apiKey, apiSecret)
-	session := &Session{ID: sessionID}
 
-	token, err := ot.Token(session, nil)
+	token, err := ot.Token(sessionID, nil)
 	decodedMap, _ := helpers.Token().Decode(token.String())
 
 	if err != nil {
@@ -282,12 +280,12 @@ func TestTokenWithNil(t *testing.T) {
 
 func TestTokenWithParams(t *testing.T) {
 	ot := New(apiKey, apiSecret)
-	session := &Session{ID: sessionID}
+
 	expireTime := time.Now().Unix() + 60
 	data := "Some data"
 	role := Subscriber
 
-	token, err := ot.Token(session, &TokenProps{
+	token, err := ot.Token(sessionID, &TokenProps{
 		ExpireTime: expireTime,
 		Data:       data,
 		Role:       role,
@@ -313,9 +311,8 @@ func TestTokenWithParams(t *testing.T) {
 
 func TestTokenFails(t *testing.T) {
 	ot := New(apiKey, apiSecret)
-	session := &Session{}
 
-	if _, err := ot.Token(session, &TokenProps{}); err == nil {
+	if _, err := ot.Token("", &TokenProps{}); err == nil {
 		t.Fatalf("Err should not be nil")
 	}
 }
