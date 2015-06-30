@@ -27,7 +27,8 @@ The following command will generate a sessionId and a token with your API_KEY an
 Testing That Everything Works:
 ------------------------------
 Once you get your API_KEY and API_SECRET, you can make sure that everything
-works by running the tests that come with the SDK::
+works by running the tests that come with the SDK (the tests will not run with
+go < 1.4 since we use testing.M)::
   go test github.com/eauge/opentok/
 
 The Go OpenTok SDK works in combination with an OpenTok client. A developer
